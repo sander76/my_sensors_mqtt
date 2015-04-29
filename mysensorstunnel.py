@@ -27,24 +27,25 @@ class Tunneler:
         # the serial connection
         self.serial_connection = serial_connection
 
-        t = threading.Thread(target=self.reader, args=(self.serial_connection,self.to_mqtt))
+        t = threading.Thread(target=self.reader)
         t.start()
 
-    def get_mqtt_topic(self,data):
-        return data
+    def get_mqtt_topic(self,node):
+        try:
+            topic = next(i[0]for i in self.translation_table if i[1]==node )
+            return topic
+        except StopIteration:
+            raise UserWarning("No mqtt topic found for : {}".format(node))
 
     def get_mysensor_node(self,topic):
         try:
-            topic = next(i[1] for i in self.translation_table if i[0]==topic)
+            node = next(i[1] for i in self.translation_table if i[0]==topic)
+            return node
         except StopIteration:
             raise UserWarning("no mysensor node found for : {}".format(topic))
-        if topic:
-            return topic
-        else:
-            raise UserWarning("no mysensor node found for : {}".format(topic))
 
 
-    def reader(self, serial,on_data_received):
+    def reader(self):
         while 1:
             bfr = []
             x = self.serial_connection.read(1)
@@ -58,9 +59,11 @@ class Tunneler:
                     bfr.append(x)
 
     def to_mqtt(self,data):
-        lgr.debug("incoming data from serial port.")
-        pass
-
+        lgr.debug("incoming data from serial port: {}".format(data))
+        try:
+            pass
+        except UserWarning,e:
+            lgr.debug(e.message)
 
     def on_message_from_mqtt(self,client, userdata, msg):
         lgr.debug("incoming data from mqtt: topic: {} payload: {}".format(msg.topic, msg.payload))
