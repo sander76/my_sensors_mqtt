@@ -1,0 +1,3 @@
+# my_sensors_mqtt
+A small service monitoring the MySensors gateway and tunneling them to an MQTT broker following a translation table.
+work in progress...
