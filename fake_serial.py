@@ -27,7 +27,7 @@ class Serial:
         self.rtscts   = rtscts
         self._isOpen  = True
         self._receivedData = ""
-        self._data = "It was the best of times.\nIt was the worst of times.\n"
+        self._data =''# "It was the best of times.\nIt was the worst of times.\n"
 
     ## isOpen()
     # returns True if the port to the Arduino is open.  False otherwise
@@ -54,8 +54,8 @@ class Serial:
     # reads n characters from the fake Arduino. Actually n characters
     # are read from the string _data and returned to the caller.
     def read( self, n=1 ):
-        if len(self._data)==0:
-            time.sleep(20)
+        while len(self._data)==0:
+            time.sleep(1)
         s = self._data[0:n]
         self._data = self._data[n:]
         #print( "read: now self._data = ", self._data )

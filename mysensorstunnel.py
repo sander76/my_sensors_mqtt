@@ -10,8 +10,13 @@ import fake_serial
 import threading
 
 lgr = logging.getLogger(__name__)
+lgr.setLevel(logging.DEBUG)
 
-
+handler=logging.FileHandler("tunneler.log")
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+lgr.addHandler(handler)
 
 class Tunneler:
     def __init__(self,
@@ -21,7 +26,7 @@ class Tunneler:
                  update_host='',
                  update_port=8889):
         # the table with mysensors to mqtt topics.
-        self.translation_table
+
         self.translation_file="mysensors_mqtt_table.json"
         self.load_translation_table()
 
@@ -78,14 +83,19 @@ class Tunneler:
             print ("closing connection")
             conn.close()
 
-    def get_mqtt_topic(self, node):
+    def get_mqtt_topic_and_payload(self, node):
+        vals = node.split(';')
+        node = (';'.join(vals[0:-1]))+';'
+        payload=vals[-1]
+        lgr.debug("node addres: {} payload: {}".format(node,payload))
         try:
             topic = next(i[0] for i in self.translation_table if i[1] == node)
-            return topic
+            return topic,payload
         except StopIteration:
             raise UserWarning("No mqtt topic found for : {}".format(node))
         except TypeError:
             raise UserWarning("No translation table available.")
+
 
     def get_mysensor_node(self, topic):
         try:
@@ -112,7 +122,8 @@ class Tunneler:
     def to_mqtt(self, data):
         lgr.debug("incoming data from serial port: {}".format(data))
         try:
-            #todo : finish this.
+            topic,payload=self.get_mqtt_topic_and_payload(data)
+            self.mqtt.publish(topic,payload,retain=True)
             pass
         except UserWarning, e:
             lgr.debug(e.message)
@@ -126,5 +137,5 @@ class Tunneler:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
     Tunneler()
