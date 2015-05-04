@@ -137,5 +137,6 @@ class Tunneler:
 
 
 if __name__ == "__main__":
+    serial = serial.Serial("/dev/ttyMySensorsGateway")
     #logging.basicConfig(level=logging.DEBUG)
-    Tunneler()
+    Tunneler(address="localhost",serial_connection=serial)
