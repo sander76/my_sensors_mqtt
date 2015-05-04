@@ -12,7 +12,7 @@ import threading
 lgr = logging.getLogger(__name__)
 lgr.setLevel(logging.DEBUG)
 
-handler=logging.FileHandler("tunneler.log")
+handler=logging.FileHandler("/home/pi/tunneler.log")
 handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
