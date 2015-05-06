@@ -66,22 +66,27 @@ class Tunneler:
 
         s.listen(1)
         lgr.debug("socket now listening")
-        conn,add = s.accept()
+
         try:
             while 1:
+                conn,add = s.accept()
                 lgr.debug("waiting for incoming data.")
                 data=conn.recv(1024)
-                try:
-                    lgr.debug(data)
-                    js = json.loads(data)
-                    self.translation_table=js
-                    self.save_translation_table(js)
-                except ValueError,msg:
-                    lgr.debug(msg.message)
+                if not data:
+                    lgr.debug("data is nothing. closing connection")
+                    conn.close()
+                else:
+                    lgr.debug("incoming data: {}".format(data))
+                    try:
+                        js = json.loads(data)
+                        self.translation_table=js
+                        self.save_translation_table(js)
+                    except ValueError,msg:
+                        lgr.debug(msg.message)
 
         finally:
-            print ("closing connection")
-            conn.close()
+            lgr.debug("closing socket")
+            s.close()
 
     def get_mqtt_topic_and_payload(self, node):
         vals = node.split(';')
