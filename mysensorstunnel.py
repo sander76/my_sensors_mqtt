@@ -1,40 +1,47 @@
-import json
-import socket
-import sys
+""" mysensors mqtt tunneler.
+
+Usage:
+  mysensorstunnel.py MQTT_ADDRESS MQTT_PORT LOG_FILE [SERIAL_PORT]
+
+Options:
+  -h --help     Show this screen.
+
+"""
 
 __author__ = 'sander'
+import json
 import serial
 import logging
 import paho.mqtt.client as mqtt_client
 import fake_serial
 import threading
+from collections import defaultdict
+from docopt import docopt
 
 lgr = logging.getLogger(__name__)
-lgr.setLevel(logging.DEBUG)
-
-handler=logging.FileHandler("/home/pi/tunneler.log")
-handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-lgr.addHandler(handler)
+
+streamh = logging.StreamHandler()
+streamh.setLevel(logging.DEBUG)
+streamh.setFormatter(formatter)
+lgr.addHandler(streamh)
 
 class Tunneler:
     def __init__(self,
-                 address='test.mosquitto.org',
-                 port=1883,
-                 serial_connection=fake_serial.Serial(),
-                 update_host='',
-                 update_port=8889):
+                 mqtt_address='test.mosquitto.org',
+                 mqtt_port=1883,
+                 serial_connection=fake_serial.Serial()):
+
         # the table with mysensors to mqtt topics.
-
-        self.translation_file="mysensors_mqtt_table.json"
+        self.translation_file="structure.json"
         self.load_translation_table()
-
+        self.make_node_table(self.translation_table)
+        self.make_topic_table(self.translation_table)
         # the mqtt client.
         self.mqtt = mqtt_client.Client()
         self.mqtt.on_message = self.on_message_from_mqtt
-        self.mqtt.connect(address, port=port)
-        self.mqtt.subscribe('mysensors/#')
+        self.mqtt.connect(mqtt_address, port=mqtt_port)
+        self.mqtt.subscribe('room/#')
         self.mqtt.loop_start()
 
         # the serial connection
@@ -43,73 +50,45 @@ class Tunneler:
         t = threading.Thread(target=self.reader)
         t.start()
 
-        u_t = threading.Thread(target=self.update_translation_table,args=(update_host,update_port))
-        u_t.start()
+        # u_t = threading.Thread(target=self.update_translation_table,args=(update_host,update_port))
+        # u_t.start()
 
     def load_translation_table(self):
         with open(self.translation_file) as fl:
             self.translation_table=json.load(fl)
 
-    def save_translation_table(self,js):
-        with open(self.translation_file,"w") as fl:
-            json.dump(js,fl)
+    def make_node_table(self,js):
+        self.node_table={}
+        for itm in js:
+            self.node_table[itm["node"]]=[]
+            for topic in itm["pub"]:
+                self.node_table[itm["node"]].append(topic)
 
-    def update_translation_table(self,update_host,update_port):
-        s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    def make_topic_table(self,js):
+        self.topic_table=defaultdict(list)
+        for itm in js:
+            for topic in itm["sub"]:
+                self.topic_table[topic].append(itm['node'])
 
-        try:
-            s.bind((update_host,update_port))
-        except socket.error,msg:
-            lgr.error("Bind failed. {} {}".format(msg[0],msg[1]))
 
-            #sys.exit()
-
-        s.listen(1)
-        lgr.debug("socket now listening")
-
-        try:
-            while 1:
-                conn,add = s.accept()
-                lgr.debug("waiting for incoming data.")
-                data=conn.recv(1024)
-                if not data:
-                    lgr.debug("data is nothing. closing connection")
-                    conn.close()
-                else:
-                    lgr.debug("incoming data: {}".format(data))
-                    try:
-                        js = json.loads(data)
-                        self.translation_table=js
-                        self.save_translation_table(js)
-                    except ValueError,msg:
-                        lgr.debug(msg.message)
-
-        finally:
-            lgr.debug("closing socket")
-            s.close()
 
     def get_mqtt_topic_and_payload(self, node):
         vals = node.split(';')
         node = (';'.join(vals[0:-1]))+';'
         payload=vals[-1]
         lgr.debug("node addres: {} payload: {}".format(node,payload))
-        try:
-            topic = next(i[0] for i in self.translation_table if i[1] == node)
-            return topic,payload
-        except StopIteration:
+        if node in self.node_table:
+            return self.node_table[node],payload
+        else:
             raise UserWarning("No mqtt topic found for : {}".format(node))
-        except TypeError:
-            raise UserWarning("No translation table available.")
 
 
-    def get_mysensor_node(self, topic):
-        try:
-            node = next(i[1] for i in self.translation_table if i[0] == topic)
-            return node
-        except StopIteration:
-            raise UserWarning("no mysensor node found for : {}".format(topic))
-        except TypeError:
-            raise UserWarning("No translation table available.")
+    def get_mysensor_nodes(self, topic):
+        if topic in self.topic_table:
+            nodes = self.topic_table[topic]
+            return nodes
+        else:
+            raise UserWarning("No nodes found for topic : {}".format(topic))
 
     def reader(self):
         while 1:
@@ -127,8 +106,9 @@ class Tunneler:
     def to_mqtt(self, data):
         lgr.debug("incoming data from serial port: {}".format(data))
         try:
-            topic,payload=self.get_mqtt_topic_and_payload(data)
-            self.mqtt.publish(topic,payload,retain=True)
+            topics,payload=self.get_mqtt_topic_and_payload(data)
+            for topic in topics:
+                self.mqtt.publish(topic,payload,retain=True)
             pass
         except UserWarning, e:
             lgr.debug(e.message)
@@ -136,12 +116,38 @@ class Tunneler:
     def on_message_from_mqtt(self, client, userdata, msg):
         lgr.debug("incoming data from mqtt: topic: {} payload: {}".format(msg.topic, msg.payload))
         try:
-            self.serial_connection.write("{}{}\n".format(self.get_mysensor_node(msg.topic), msg.payload))
+            nodes = self.get_mysensor_nodes(msg.topic)
+            for node in nodes:
+                self.serial_connection.write("{}{}\n".format(node,msg.payload))
         except UserWarning, e:
             lgr.debug(e.message)
 
 
 if __name__ == "__main__":
-    serial = serial.Serial("/dev/ttyMySensorsGateway")
-    #logging.basicConfig(level=logging.DEBUG)
-    Tunneler(address="localhost",serial_connection=serial)
+    logging.basicConfig(level=logging.DEBUG)
+    ser=None
+    tunnel=None
+    try:
+        arguments = docopt(__doc__)
+        handler=logging.FileHandler(arguments['LOG_FILE'])
+        handler.setLevel(logging.WARNING)
+        handler.setFormatter(formatter)
+        lgr.addHandler(handler)
+
+        #serial = serial.Serial("/dev/ttyMySensorsGateway")
+        #logging.basicConfig(level=logging.DEBUG)
+        if "SERIAL_PORT" in arguments:
+            ser=serial.Serial(arguments['SERIAL_PORT'])
+            tunnel=Tunneler(arguments['MQTT_ADDRESS'],arguments['MQTT_PORT'],serial_connection=ser)
+        else:
+            ser=fake_serial.Serial()
+            tunnel=Tunneler(arguments['MQTT_ADDRESS'],arguments['MQTT_PORT'],serial_connection=ser)
+        #Tunneler(address="localhost",serial_connection=serial)
+    except Exception, a:
+        lgr.warning(a)
+
+    finally:
+        if ser:
+            ser.close()
+        if tunnel:
+            tunnel.mqtt.loop_stop()
