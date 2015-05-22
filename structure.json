@@ -1,0 +1,25 @@
+[
+    {
+      "ui_name": "bedroom light 1",
+      "comment": "the name to appear in the ui",
+      "ui_type": "toggle",
+      "comment": "the type this control has to take",
+      "node": "1;100;1;0;2;",
+      "comment":"mysensors node address",
+      "sub": [
+
+        "room/lights/1",
+        "room/lights/all"
+      ],
+      "comment":"mysensors node and ui control subscribes to this",
+      "pub": ["room/lights/1"],
+      "comment":"// mysensors node and ui control publish to this."
+    },
+    {
+      "ui_name": "living room temp 1",
+      "ui_type": "temp",
+      "node": "1;0;1;0;0;",
+      "pub": ["room/temperatures/1"],
+      "sub": ["room/temperatures/1"]
+    }
+  ]
