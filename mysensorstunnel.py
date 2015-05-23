@@ -140,12 +140,13 @@ if __name__ == "__main__":
 
         #serial = serial.Serial("/dev/ttyMySensorsGateway")
         #logging.basicConfig(level=logging.DEBUG)
+        structure = arguments['STRUCTURE_FILE']
         if "SERIAL_PORT" in arguments:
             ser=serial.Serial(arguments['SERIAL_PORT'])
-            tunnel=Tunneler(arguments['MQTT_ADDRESS'],arguments['MQTT_PORT'],serial_connection=ser)
+            tunnel=Tunneler(arguments['MQTT_ADDRESS'],arguments['MQTT_PORT'],structure,serial_connection=ser)
         else:
             ser=fake_serial.Serial()
-            tunnel=Tunneler(arguments['MQTT_ADDRESS'],arguments['MQTT_PORT'],serial_connection=ser)
+            tunnel=Tunneler(arguments['MQTT_ADDRESS'],arguments['MQTT_PORT'],structure,serial_connection=ser)
         #Tunneler(address="localhost",serial_connection=serial)
     except Exception, a:
         lgr.warning(a)
