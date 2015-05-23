@@ -95,6 +95,8 @@ class Tunneler:
             raise UserWarning("No nodes found for topic : {}".format(topic))
 
     def reader(self):
+        if self.serial_connection.isOpen()==False:
+            self.serial_connection.open()
         while 1:
             bfr = []
             x = self.serial_connection.read(1)
