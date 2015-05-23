@@ -1,7 +1,7 @@
 """ mysensors mqtt tunneler.
 
 Usage:
-  mysensorstunnel.py MQTT_ADDRESS MQTT_PORT LOG_FILE [SERIAL_PORT]
+  mysensorstunnel.py MQTT_ADDRESS MQTT_PORT STRUCTURE_FILE LOG_FILE [SERIAL_PORT]
 
 Options:
   -h --help     Show this screen.
@@ -26,14 +26,18 @@ streamh.setLevel(logging.DEBUG)
 streamh.setFormatter(formatter)
 lgr.addHandler(streamh)
 
+#='test.mosquitto.org'
+#=1883
+
 class Tunneler:
     def __init__(self,
-                 mqtt_address='test.mosquitto.org',
-                 mqtt_port=1883,
+                 mqtt_address,
+                 mqtt_port,
+                 structure_file,
                  serial_connection=fake_serial.Serial()):
 
         # the table with mysensors to mqtt topics.
-        self.translation_file="structure.json"
+        self.translation_file=structure_file
         self.load_translation_table()
         self.make_node_table(self.translation_table)
         self.make_topic_table(self.translation_table)
