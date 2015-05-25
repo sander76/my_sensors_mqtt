@@ -1,7 +1,7 @@
 """ MongoDB Logger.
 
 Usage:
-  logger.py MONGO_URI MQTT_IP MQTT_PORT
+  logger.py MONGO_URI MONGO_USR MONGO_PASS MQTT_IP MQTT_PORT
 
 Options:
   -h --help     Show this screen.
@@ -61,4 +61,7 @@ class Logger:
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
-    logger = Logger(arguments['MONGO_URI'],arguments['MQTT_IP'],arguments['MQTT_PORT'])
+    "mongodb://steunissen:!tequilla!@ds031972.mongolab.com:31972/domodb 192.168.2.14 1883"
+    mongo_uri = "mongodb://{}:{}@{}".format(arguments["MONGO_USR"],arguments["MONGO_PASS"],arguments["MONGO_URI"])
+
+    logger = Logger(mongo_uri,arguments['MQTT_IP'],arguments['MQTT_PORT'])
