@@ -46,14 +46,19 @@ class Tunneler:
         self.mqtt.on_message = self.on_message_from_mqtt
         self.mqtt.connect(mqtt_address, port=mqtt_port)
         self.mqtt.subscribe('room/#')
-        self.mqtt.loop_start()
+
 
         # the serial connection
         self.serial_connection = serial_connection
+        if self.serial_connection.isOpen()==False:
+            self.serial_connection.open()
+        self.keep_reading=True
+        self.t = threading.Thread(target=self.reader)
+        #self.t.setDaemon(True)
+        self.t.start()
+        #self.t.join()
 
-        t = threading.Thread(target=self.reader)
-        t.start()
-
+        self.mqtt.loop_forever()
         # u_t = threading.Thread(target=self.update_translation_table,args=(update_host,update_port))
         # u_t.start()
 
@@ -95,19 +100,18 @@ class Tunneler:
             raise UserWarning("No nodes found for topic : {}".format(topic))
 
     def reader(self):
-        if self.serial_connection.isOpen()==False:
-            self.serial_connection.open()
-        while 1:
+        while self.keep_reading:
             bfr = []
             x = self.serial_connection.read(1)
             bfr.append(x)
             while x:
-                x = self.serial_connection.read()
+                x = self.serial_connection.read(1)
                 if x == '\n':
                     self.to_mqtt(''.join(bfr))
                     bfr = []
                 else:
                     bfr.append(x)
+        lgr.debug("Stop this read loop.")
 
     def to_mqtt(self, data):
         lgr.debug("incoming data from serial port: {}".format(data))
@@ -143,13 +147,15 @@ if __name__ == "__main__":
         #serial = serial.Serial("/dev/ttyMySensorsGateway")
         #logging.basicConfig(level=logging.DEBUG)
         structure = arguments['STRUCTURE_FILE']
-        if "SERIAL_PORT" in arguments:
+        if arguments["SERIAL_PORT"]:
             ser=serial.Serial(arguments['SERIAL_PORT'])
             tunnel=Tunneler(arguments['MQTT_ADDRESS'],arguments['MQTT_PORT'],structure,serial_connection=ser)
         else:
             ser=fake_serial.Serial()
             tunnel=Tunneler(arguments['MQTT_ADDRESS'],arguments['MQTT_PORT'],structure,serial_connection=ser)
         #Tunneler(address="localhost",serial_connection=serial)
+    except KeyboardInterrupt:
+        lgr.warning("exiting")
     except Exception, a:
         lgr.warning(a)
 
@@ -157,4 +163,5 @@ if __name__ == "__main__":
         if ser:
             ser.close()
         if tunnel:
+            tunnel.keep_reading=False
             tunnel.mqtt.loop_stop()
