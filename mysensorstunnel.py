@@ -134,15 +134,15 @@ class Tunneler:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.WARNING)
     ser=None
     tunnel=None
     try:
         arguments = docopt(__doc__)
-        handler=logging.FileHandler(arguments['LOG_FILE'])
-        handler.setLevel(logging.WARNING)
-        handler.setFormatter(formatter)
-        lgr.addHandler(handler)
+        #handler=logging.FileHandler(arguments['LOG_FILE'])
+        #handler.setLevel(logging.WARNING)
+        #handler.setFormatter(formatter)
+        #lgr.addHandler(handler)
 
         #serial = serial.Serial("/dev/ttyMySensorsGateway")
         #logging.basicConfig(level=logging.DEBUG)
