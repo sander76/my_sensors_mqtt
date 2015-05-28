@@ -61,7 +61,7 @@ class Logger:
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
-    "mongodb://steunissen:!tequilla!@ds031972.mongolab.com:31972/domodb 192.168.2.14 1883"
+
     mongo_uri = "mongodb://{}:{}@{}".format(arguments["MONGO_USR"],arguments["MONGO_PASS"],arguments["MONGO_URI"])
 
     logger = Logger(mongo_uri,arguments['MQTT_IP'],arguments['MQTT_PORT'])
