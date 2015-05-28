@@ -55,8 +55,11 @@ class Logger:
         cur_hour, cur_minute = self.get_current_hour_and_minute()
         self.collection.find_one_and_update({"hourtime": cur_hour},
                                   {'$set': {"hourtime": cur_hour,
-                                            "topic.desc": mqtt_message.topic,
-                                            "topic.vals.{}".format(cur_minute): mqtt_message.payload}},
+                                            #"topic.desc": mqtt_message.topic,
+                                            #"topic.vals.{}".format(cur_minute): mqtt_message.payload,
+                                            "topics.{}.vals.{}".format(mqtt_message.topic, cur_minute):mqtt_message.payload
+                                            },},
+
                                   upsert=True)
 
 
