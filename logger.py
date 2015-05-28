@@ -60,8 +60,10 @@ class Logger:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     arguments = docopt(__doc__)
 
     mongo_uri = "mongodb://{}:{}@{}".format(arguments["MONGO_USR"],arguments["MONGO_PASS"],arguments["MONGO_URI"])
-
+    lgr.info("starting logger.")
     logger = Logger(mongo_uri,arguments['MQTT_IP'],arguments['MQTT_PORT'])
+    lgr.info("logger stopped.")
