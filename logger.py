@@ -1,12 +1,13 @@
 """ MongoDB Logger.
 
 Usage:
-  logger.py MONGO_URI MONGO_USR MONGO_PASS MQTT_IP MQTT_PORT
+  logger.py MONGO_URI MONGO_USR MONGO_PASS MQTT_IP MQTT_PORT LOG_FILE
 
 Options:
   -h --help     Show this screen.
 
 """
+from logging.handlers import RotatingFileHandler
 
 __author__ = 'sander'
 
@@ -62,8 +63,19 @@ class Logger:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     arguments = docopt(__doc__)
+    rot_handler = RotatingFileHandler(arguments["LOG_FILE"],
+                                      maxBytes=10000,
+                                      backupCount=20)
+    rot_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    rot_handler.setFormatter(formatter)
+    lgr.addHandler(rot_handler)
+    try:
+        mongo_uri = "mongodb://{}:{}@{}".format(arguments["MONGO_USR"],arguments["MONGO_PASS"],arguments["MONGO_URI"])
+        lgr.info("starting logger.")
+        logger = Logger(mongo_uri,arguments['MQTT_IP'],arguments['MQTT_PORT'])
 
-    mongo_uri = "mongodb://{}:{}@{}".format(arguments["MONGO_USR"],arguments["MONGO_PASS"],arguments["MONGO_URI"])
-    lgr.info("starting logger.")
-    logger = Logger(mongo_uri,arguments['MQTT_IP'],arguments['MQTT_PORT'])
-    lgr.info("logger stopped.")
+    except Exception, e:
+        lgr.exception(e)
+    finally:
+        lgr.info("logger stopped.")
